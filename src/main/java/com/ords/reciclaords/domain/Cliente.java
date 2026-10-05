@@ -1,32 +1,27 @@
 package com.ords.reciclaords.domain;
+
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
-
 
 @Entity
-@Table(name = "materiais")
+@Table(name = "clientes")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Material {
+public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable =  false, unique = true)
+    @Column(nullable = false)
     private String nome;
 
-    @Column(nullable = false)
-    private String categoria;
+    // CPF ou CNPJ
+    @Column(unique = true)
+    private String documento;
 
-
-    @Column(nullable = false, precision = 10, scale = 3)
-    private BigDecimal estoqueKg;
-
-
-
+    private String telefone;
 }

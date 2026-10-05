@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Recicla Ords</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>Recicla Ords</h1>
+    <nav id="abas">
+        <button data-aba="compras" class="ativa">Compras</button>
+        <button data-aba="vendas">Vendas</button>
+        <button data-aba="estoque">Estoque</button>
+        <button data-aba="clientes">Clientes</button>
+        <button data-aba="financeiro">Financeiro</button>
+    </nav>
+</header>
+
+<div id="mensagem" hidden></div>
+
+<main>
+    <!-- Compra de materiais de um cliente (entrada de estoque) -->
+    <section id="compras">
+        <h2>Nova compra</h2>
+        <form id="form-compra">
+            <label>Cliente
+                <select id="compra-cliente" required></select>
+            </label>
+            <table class="itens">
+                <thead>
+                <tr><th>Material</th><th>Peso (kg)</th><th>Preço por kg (R$)</th><th>Total</th><th></th></tr>
+                </thead>
+                <tbody id="compra-itens"></tbody>
+                <tfoot>
+                <tr><td colspan="3">Total da compra</td><td id="compra-total" class="num">R$ 0,00</td><td></td></tr>
+                </tfoot>
+            </table>
+            <div class="acoes">
+                <button type="button" class="secundario" data-adicionar="compra">+ Adicionar item</button>
+                <button type="submit">Registrar compra</button>
+            </div>
+        </form>
+
+        <h2>Compras registradas</h2>
+        <table>
+            <thead><tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="num">Valor</th></tr></thead>
+            <tbody id="lista-compras"></tbody>
+        </table>
+    </section>
+
+    <!-- Venda do estoque (saída de estoque) -->
+    <section id="vendas" hidden>
+        <h2>Nova venda</h2>
+        <form id="form-venda">
+            <label>Comprador (opcional)
+                <input id="venda-comprador" maxlength="255">
+            </label>
+            <table class="itens">
+                <thead>
+                <tr><th>Material</th><th>Peso (kg)</th><th>Preço por kg (R$)</th><th>Total</th><th></th></tr>
+                </thead>
+                <tbody id="venda-itens"></tbody>
+                <tfoot>
+                <tr><td colspan="3">Total da venda</td><td id="venda-total" class="num">R$ 0,00</td><td></td></tr>
+                </tfoot>
+            </table>
+            <div class="acoes">
+                <button type="button" class="secundario" data-adicionar="venda">+ Adicionar item</button>
+                <button type="submit">Registrar venda</button>
+            </div>
+        </form>
+
+        <h2>Vendas registradas</h2>
+        <table>
+            <thead><tr><th>Data</th><th>Comprador</th><th>Itens</th><th class="num">Valor</th></tr></thead>
+            <tbody id="lista-vendas"></tbody>
+        </table>
+    </section>
+
+    <section id="estoque" hidden>
+        <h2>Estoque</h2>
+        <p class="destaque">Peso total em estoque: <strong id="estoque-total">0 kg</strong></p>
+        <table>
+            <thead><tr><th>Material</th><th>Categoria</th><th class="num">Em estoque</th><th></th></tr></thead>
+            <tbody id="lista-estoque"></tbody>
+        </table>
+
+        <h2>Novo material</h2>
+        <form id="form-material" class="linha">
+            <label>Nome <input id="material-nome" required maxlength="255"></label>
+            <label>Categoria <input id="material-categoria" required maxlength="255" placeholder="Ex.: Metal, Plástico"></label>
+            <button type="submit">Cadastrar material</button>
+        </form>
+    </section>
+
+    <section id="clientes" hidden>
+        <h2>Novo cliente</h2>
+        <form id="form-cliente" class="linha">
+            <label>Nome <input id="cliente-nome" required maxlength="255"></label>
+            <label>CPF/CNPJ <input id="cliente-documento" maxlength="20"></label>
+            <label>Telefone <input id="cliente-telefone" maxlength="20"></label>
+            <button type="submit">Cadastrar cliente</button>
+        </form>
+
+        <h2>Clientes</h2>
+        <table>
+            <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th></th></tr></thead>
+            <tbody id="lista-clientes"></tbody>
+        </table>
+    </section>
+
+    <section id="financeiro" hidden>
+        <h2>Controle de valores</h2>
+        <div class="cartoes">
+            <div class="cartao"><span>Total comprado</span><strong id="fin-compras">R$ 0,00</strong></div>
+            <div class="cartao"><span>Total vendido</span><strong id="fin-vendas">R$ 0,00</strong></div>
+            <div class="cartao" id="fin-cartao-resultado"><span id="fin-rotulo">Resultado</span><strong id="fin-resultado">R$ 0,00</strong></div>
+        </div>
+        <p class="nota">Resultado = total vendido − total comprado. O material que ainda está em estoque já foi pago, mas ainda não foi vendido.</p>
+
+        <h2>Por material</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Material</th>
+                <th class="num">Comprado (kg)</th><th class="num">Comprado (R$)</th>
+                <th class="num">Vendido (kg)</th><th class="num">Vendido (R$)</th>
+                <th class="num">Em estoque (kg)</th><th class="num">Resultado</th>
+            </tr>
+            </thead>
+            <tbody id="lista-financeiro"></tbody>
+        </table>
+    </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,4 +1,11 @@
 package com.ords.reciclaords.dto;
 
-public class MaterialResponseDTO {
+import java.math.BigDecimal;
+
+public record MaterialResponseDTO(
+        Long id,
+        String nome,
+        String categoria,
+        BigDecimal estoqueKg
+) {
 }
