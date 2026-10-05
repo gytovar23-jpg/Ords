@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Recicla Ords</title>
+    <link rel="icon" href="logo.png" type="image/png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-    <h1>Recicla Ords</h1>
+    <div class="topo">
+        <div class="marca">
+            <img src="logo.png" alt="">
+            <h1>Recicla <span>Ords</span></h1>
+        </div>
+        <button type="button" id="sair" class="secundario">Sair</button>
+    </div>
     <nav id="abas">
         <button data-aba="compras" class="ativa">Compras</button>
         <button data-aba="vendas">Vendas</button>
@@ -23,7 +30,7 @@
 <main>
     <!-- Compra de materiais de um cliente (entrada de estoque) -->
     <section id="compras">
-        <h2>Nova compra</h2>
+        <h2 id="compra-titulo">Nova compra</h2>
         <form id="form-compra">
             <label>Cliente
                 <select id="compra-cliente" required></select>
@@ -39,20 +46,23 @@
             </table>
             <div class="acoes">
                 <button type="button" class="secundario" data-adicionar="compra">+ Adicionar item</button>
-                <button type="submit">Registrar compra</button>
+                <div class="grupo">
+                    <button type="button" class="secundario" id="compra-cancelar" hidden>Cancelar alteração</button>
+                    <button type="submit" id="compra-enviar">Registrar compra</button>
+                </div>
             </div>
         </form>
 
         <h2>Compras registradas</h2>
         <table>
-            <thead><tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="num">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Cliente</th><th>Itens</th><th class="num">Valor</th><th></th></tr></thead>
             <tbody id="lista-compras"></tbody>
         </table>
     </section>
 
     <!-- Venda do estoque (saída de estoque) -->
     <section id="vendas" hidden>
-        <h2>Nova venda</h2>
+        <h2 id="venda-titulo">Nova venda</h2>
         <form id="form-venda">
             <label>Comprador (opcional)
                 <input id="venda-comprador" maxlength="255">
@@ -68,13 +78,16 @@
             </table>
             <div class="acoes">
                 <button type="button" class="secundario" data-adicionar="venda">+ Adicionar item</button>
-                <button type="submit">Registrar venda</button>
+                <div class="grupo">
+                    <button type="button" class="secundario" id="venda-cancelar" hidden>Cancelar alteração</button>
+                    <button type="submit" id="venda-enviar">Registrar venda</button>
+                </div>
             </div>
         </form>
 
         <h2>Vendas registradas</h2>
         <table>
-            <thead><tr><th>Data</th><th>Comprador</th><th>Itens</th><th class="num">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Comprador</th><th>Itens</th><th class="num">Valor</th><th></th></tr></thead>
             <tbody id="lista-vendas"></tbody>
         </table>
     </section>
@@ -120,6 +133,25 @@
         </div>
         <p class="nota">Resultado = total vendido − total comprado. O material que ainda está em estoque já foi pago, mas ainda não foi vendido.</p>
 
+        <h2>Compras e vendas por mês</h2>
+        <p class="nota">Últimos 12 meses.</p>
+        <div class="grafico" id="grafico-meses"></div>
+
+        <h2>Resultado por mês</h2>
+        <p class="nota">Vendas − compras de cada mês, nos últimos 12 meses.</p>
+        <div class="grafico" id="grafico-resultado"></div>
+        <details>
+            <summary>Ver os valores por mês</summary>
+            <table>
+                <thead><tr><th>Mês</th><th class="num">Compras</th><th class="num">Vendas</th><th class="num">Resultado</th></tr></thead>
+                <tbody id="lista-meses"></tbody>
+            </table>
+        </details>
+
+        <h2>Compras e vendas por material</h2>
+        <p class="nota">Valor total de todo o período.</p>
+        <div class="grafico" id="grafico-materiais"></div>
+
         <h2>Por material</h2>
         <table>
             <thead>
@@ -135,6 +167,7 @@
     </section>
 </main>
 
+<script src="graficos.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -29,4 +29,15 @@ public class VendaController {
     public List<VendaResponseDTO> listarTodas() {
         return vendaService.listarTodas();
     }
+
+    @PutMapping("/{id}")
+    public VendaResponseDTO atualizar(@PathVariable Long id, @RequestBody @Valid VendaRequestDTO dados) {
+        return vendaService.atualizar(id, dados);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir(@PathVariable Long id) {
+        vendaService.excluir(id);
+    }
 }

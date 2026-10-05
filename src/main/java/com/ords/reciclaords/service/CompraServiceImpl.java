@@ -19,7 +19,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CompraServiceImpl implements CompraService {
@@ -40,16 +42,103 @@ public class CompraServiceImpl implements CompraService {
     @Transactional
     public CompraResponseDTO registrar(CompraRequestDTO dados) {
 
-        Cliente cliente = clienteRepository.findById(dados.clienteId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
-
         Compra compra = Compra.builder()
-                .cliente(cliente)
+                .cliente(buscarCliente(dados.clienteId()))
                 .data(LocalDateTime.now())
                 .valorTotal(BigDecimal.ZERO)
                 .build();
 
-        for (ItemRequestDTO item : dados.itens()) {
+        lancarItens(compra, dados.itens());
+
+        return converterParaResponse(compraRepository.save(compra));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompraResponseDTO> listarTodas() {
+
+        return compraRepository.findAllByOrderByDataDesc()
+                .stream()
+                .map(this::converterParaResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CompraResponseDTO atualizar(Long id, CompraRequestDTO dados) {
+
+        Compra compra = buscar(id);
+
+        // Desfaz a compra antiga e lança a corrigida; o saldo só é conferido no fim, já com os novos itens.
+        // A data original é mantida, para a compra continuar no mesmo mês do financeiro.
+        Set<Material> movimentados = retirarEstoque(compra);
+        compra.getItens().clear();
+        compra.setValorTotal(BigDecimal.ZERO);
+        compra.setCliente(buscarCliente(dados.clienteId()));
+
+        movimentados.addAll(lancarItens(compra, dados.itens()));
+        validarEstoque(movimentados);
+
+        return converterParaResponse(compraRepository.save(compra));
+    }
+
+    @Override
+    @Transactional
+    public void excluir(Long id) {
+
+        Compra compra = buscar(id);
+
+        validarEstoque(retirarEstoque(compra));
+
+        compraRepository.delete(compra);
+    }
+
+    private Compra buscar(Long id) {
+
+        return compraRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Compra não encontrada"));
+    }
+
+    private Cliente buscarCliente(Long id) {
+
+        return clienteRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
+    }
+
+    // O que entrou nessa compra sai do estoque
+    private Set<Material> retirarEstoque(Compra compra) {
+
+        Set<Material> movimentados = new LinkedHashSet<>();
+
+        for (CompraItem item : compra.getItens()) {
+
+            Material material = materialRepository.findByIdParaAtualizar(item.getMaterial().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material não encontrado"));
+
+            material.setEstoqueKg(material.getEstoqueKg().subtract(item.getPesoKg()));
+            movimentados.add(material);
+        }
+
+        return movimentados;
+    }
+
+    // Material comprado que já foi vendido não pode sumir do estoque: o saldo ficaria negativo
+    private void validarEstoque(Set<Material> materiais) {
+
+        for (Material material : materiais) {
+            if (material.getEstoqueKg().signum() < 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Parte do material " + material.getNome() + " dessa compra já foi vendida: faltariam "
+                                + material.getEstoqueKg().negate().toPlainString() + " kg no estoque");
+            }
+        }
+    }
+
+    private Set<Material> lancarItens(Compra compra, List<ItemRequestDTO> itens) {
+
+        Set<Material> movimentados = new LinkedHashSet<>();
+
+        for (ItemRequestDTO item : itens) {
 
             Material material = materialRepository.findByIdParaAtualizar(item.materialId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material não encontrado"));
@@ -71,19 +160,10 @@ public class CompraServiceImpl implements CompraService {
 
             // Entrada de estoque
             material.setEstoqueKg(material.getEstoqueKg().add(pesoKg));
+            movimentados.add(material);
         }
 
-        return converterParaResponse(compraRepository.save(compra));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CompraResponseDTO> listarTodas() {
-
-        return compraRepository.findAllByOrderByDataDesc()
-                .stream()
-                .map(this::converterParaResponse)
-                .toList();
+        return movimentados;
     }
 
     private CompraResponseDTO converterParaResponse(Compra compra) {

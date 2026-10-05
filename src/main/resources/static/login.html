@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Entrar — Recicla Ords</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="pagina-entrada">
+<main class="entrada">
+    <img src="logo.png" alt="">
+    <h1>Recicla <span>Ords</span></h1>
+    <p class="lema">Oreia da sucata</p>
+
+
+    <div id="mensagem" hidden></div>
+
+    <form id="form-login" hidden>
+        <h2>Entrar</h2>
+        <label>Usuário <input id="login-usuario" required maxlength="60" autocomplete="username"></label>
+        <label>Senha <input id="login-senha" type="password" required maxlength="72" autocomplete="current-password"></label>
+        <button type="submit">Entrar</button>
+    </form>
+
+    <!-- Aparece só enquanto não existe dono cadastrado -->
+    <form id="form-cadastro" hidden>
+        <h2>Primeiro acesso</h2>
+        <p class="nota">Crie o usuário e a senha do dono do site. Depois disso, só entra quem tiver essa senha.</p>
+        <label>Usuário <input id="cadastro-usuario" required maxlength="60" autocomplete="username"></label>
+        <label>Senha (mínimo de 8 caracteres)
+            <input id="cadastro-senha" type="password" required minlength="8" maxlength="72" autocomplete="new-password">
+        </label>
+        <label>Repita a senha
+            <input id="cadastro-confirmacao" type="password" required minlength="8" maxlength="72" autocomplete="new-password">
+        </label>
+        <button type="submit">Criar acesso</button>
+    </form>
+</main>
+
+<script src="login.js"></script>
+</body>
+</html>

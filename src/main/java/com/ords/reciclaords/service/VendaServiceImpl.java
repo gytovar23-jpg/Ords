@@ -35,12 +35,81 @@ public class VendaServiceImpl implements VendaService {
     public VendaResponseDTO registrar(VendaRequestDTO dados) {
 
         Venda venda = Venda.builder()
-                .comprador(dados.comprador() == null || dados.comprador().isBlank() ? null : dados.comprador().trim())
+                .comprador(limparComprador(dados.comprador()))
                 .data(LocalDateTime.now())
                 .valorTotal(BigDecimal.ZERO)
                 .build();
 
-        for (ItemRequestDTO item : dados.itens()) {
+        lancarItens(venda, dados.itens());
+
+        return converterParaResponse(vendaRepository.save(venda));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VendaResponseDTO> listarTodas() {
+
+        return vendaRepository.findAllByOrderByDataDesc()
+                .stream()
+                .map(this::converterParaResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public VendaResponseDTO atualizar(Long id, VendaRequestDTO dados) {
+
+        Venda venda = buscar(id);
+
+        // Desfaz a venda antiga e lança a corrigida: assim o estoque já devolvido conta para os novos itens.
+        // A data original é mantida, para a venda continuar no mesmo mês do financeiro.
+        devolverEstoque(venda);
+        venda.getItens().clear();
+        venda.setValorTotal(BigDecimal.ZERO);
+        venda.setComprador(limparComprador(dados.comprador()));
+
+        lancarItens(venda, dados.itens());
+
+        return converterParaResponse(vendaRepository.save(venda));
+    }
+
+    @Override
+    @Transactional
+    public void excluir(Long id) {
+
+        Venda venda = buscar(id);
+
+        devolverEstoque(venda);
+
+        vendaRepository.delete(venda);
+    }
+
+    private Venda buscar(Long id) {
+
+        return vendaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Venda não encontrada"));
+    }
+
+    private String limparComprador(String comprador) {
+
+        return comprador == null || comprador.isBlank() ? null : comprador.trim();
+    }
+
+    // O que saiu nessa venda volta para o estoque
+    private void devolverEstoque(Venda venda) {
+
+        for (VendaItem item : venda.getItens()) {
+
+            Material material = materialRepository.findByIdParaAtualizar(item.getMaterial().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material não encontrado"));
+
+            material.setEstoqueKg(material.getEstoqueKg().add(item.getPesoKg()));
+        }
+    }
+
+    private void lancarItens(Venda venda, List<ItemRequestDTO> itens) {
+
+        for (ItemRequestDTO item : itens) {
 
             Material material = materialRepository.findByIdParaAtualizar(item.materialId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material não encontrado"));
@@ -70,18 +139,6 @@ public class VendaServiceImpl implements VendaService {
             // Saída de estoque
             material.setEstoqueKg(material.getEstoqueKg().subtract(pesoKg));
         }
-
-        return converterParaResponse(vendaRepository.save(venda));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<VendaResponseDTO> listarTodas() {
-
-        return vendaRepository.findAllByOrderByDataDesc()
-                .stream()
-                .map(this::converterParaResponse)
-                .toList();
     }
 
     private VendaResponseDTO converterParaResponse(Venda venda) {

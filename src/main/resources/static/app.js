@@ -6,13 +6,26 @@ const $ = id => document.getElementById(id);
 
 let materiais = [];
 let clientes = [];
+// Id da compra/venda que está sendo alterada em cada formulário; null quando o formulário é de registro novo
+const emEdicao = {compra: null, venda: null};
+
+// O servidor entrega o token CSRF em cookie e espera recebê-lo de volta neste cabeçalho
+function cabecalhoCsrf() {
+    const token = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
+    return token ? {'X-XSRF-TOKEN': decodeURIComponent(token.split('=')[1])} : {};
+}
 
 async function api(caminho, metodo = 'GET', corpo) {
     const resposta = await fetch('/api' + caminho, {
         method: metodo,
-        headers: corpo ? {'Content-Type': 'application/json'} : undefined,
+        headers: {...(corpo ? {'Content-Type': 'application/json'} : {}), ...(metodo === 'GET' ? {} : cabecalhoCsrf())},
         body: corpo ? JSON.stringify(corpo) : undefined
     });
+    // Sessão expirada ou encerrada: volta para a tela de entrada
+    if (resposta.status === 401) {
+        location.replace('/login.html');
+        throw new Error('Sessão expirada. Entre novamente.');
+    }
     if (!resposta.ok) {
         const erro = await resposta.json().catch(() => ({}));
         throw new Error(erro.message || 'Erro ao comunicar com o servidor (' + resposta.status + ')');
@@ -61,14 +74,16 @@ function preencher(tbody, linhas, colunas) {
 
 const num = texto => ({texto, classe: 'num'});
 
-function botaoExcluir(aoClicar) {
+function botaoDeLinha(texto, classe, aoClicar) {
     const botao = document.createElement('button');
     botao.type = 'button';
-    botao.className = 'remover';
-    botao.textContent = 'Excluir';
+    botao.className = classe;
+    botao.textContent = texto;
     botao.onclick = aoClicar;
     return botao;
 }
+
+const botaoExcluir = aoClicar => botaoDeLinha('Excluir', 'remover', aoClicar);
 
 function descreverItens(itens) {
     const lista = document.createElement('div');
@@ -82,7 +97,8 @@ function descreverItens(itens) {
 
 /* ---------- Itens de compra e de venda ---------- */
 
-function adicionarItem(tipo) {
+// valores (opcional): item já gravado, para preencher a linha ao alterar uma compra ou venda
+function adicionarItem(tipo, valores) {
     const tr = document.createElement('tr');
 
     const material = document.createElement('select');
@@ -117,6 +133,11 @@ function adicionarItem(tipo) {
         if (classe) td.className = classe;
         td.append(elemento);
         tr.append(td);
+    }
+    if (valores) {
+        material.value = valores.materialId;
+        pesoKg.value = valores.pesoKg;
+        precoKg.value = valores.precoKg;
     }
     tr.oninput = () => atualizarTotal(tipo);
     $(tipo + '-itens').append(tr);
@@ -195,14 +216,26 @@ async function carregarClientes() {
     ]), 4);
 }
 
+// Botões "Alterar" e "Excluir" da linha de uma compra ou venda
+function acoesDoRegistro(tipo, registro, pergunta) {
+    const acoes = document.createElement('div');
+    acoes.className = 'grupo';
+    acoes.append(
+        botaoDeLinha('Alterar', 'editar', () => editar(tipo, registro)),
+        botaoExcluir(() => excluir(`/${tipo}s/${registro.id}`, pergunta)));
+    return acoes;
+}
+
 async function carregarCompras() {
     const compras = await api('/compras');
     preencher($('lista-compras'), compras.map(c => [
         dataHora.format(new Date(c.data)),
         c.clienteNome,
         descreverItens(c.itens),
-        num(moeda.format(c.valorTotal))
-    ]), 4);
+        num(moeda.format(c.valorTotal)),
+        acoesDoRegistro('compra', c, `Excluir a compra de ${moeda.format(c.valorTotal)}? O material sai do estoque.`)
+    ]), 5);
+    encerrarEdicaoSeExcluido('compra', compras);
 }
 
 async function carregarVendas() {
@@ -211,8 +244,43 @@ async function carregarVendas() {
         dataHora.format(new Date(v.data)),
         v.comprador,
         descreverItens(v.itens),
-        num(moeda.format(v.valorTotal))
-    ]), 4);
+        num(moeda.format(v.valorTotal)),
+        acoesDoRegistro('venda', v, `Excluir a venda de ${moeda.format(v.valorTotal)}? O material volta para o estoque.`)
+    ]), 5);
+    encerrarEdicaoSeExcluido('venda', vendas);
+}
+
+/* ---------- Alteração de compra e de venda ---------- */
+
+// Leva a compra/venda para o formulário do topo, que passa a salvar por cima dela
+function editar(tipo, registro) {
+    emEdicao[tipo] = registro.id;
+    if (tipo === 'compra') $('compra-cliente').value = registro.clienteId;
+    else $('venda-comprador').value = registro.comprador ?? '';
+    $(tipo + '-itens').replaceChildren();
+    for (const item of registro.itens) adicionarItem(tipo, item);
+
+    $(tipo + '-titulo').textContent = `Alterar ${tipo} de ${dataHora.format(new Date(registro.data))}`;
+    $(tipo + '-enviar').textContent = 'Salvar alteração';
+    $(tipo + '-cancelar').hidden = false;
+    $('form-' + tipo).classList.add('editando');
+    $(tipo + '-titulo').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function encerrarEdicao(tipo) {
+    emEdicao[tipo] = null;
+    $('form-' + tipo).reset();
+    limparItens(tipo);
+
+    $(tipo + '-titulo').textContent = 'Nova ' + tipo;
+    $(tipo + '-enviar').textContent = 'Registrar ' + tipo;
+    $(tipo + '-cancelar').hidden = true;
+    $('form-' + tipo).classList.remove('editando');
+}
+
+// O registro que estava sendo alterado foi excluído: o formulário volta a ser de registro novo
+function encerrarEdicaoSeExcluido(tipo, registros) {
+    if (emEdicao[tipo] !== null && !registros.some(r => r.id === emEdicao[tipo])) encerrarEdicao(tipo);
 }
 
 async function carregarFinanceiro() {
@@ -237,6 +305,18 @@ async function carregarFinanceiro() {
             {texto: moeda.format(resultado), classe: 'num ' + classe(resultado)}
         ];
     }), 7);
+
+    preencher($('lista-meses'), [...f.meses].reverse().map(m => {
+        const resultado = m.vendas - m.compras;
+        return [
+            new Date(m.mes + '-01T00:00:00').toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'}),
+            num(moeda.format(m.compras)),
+            num(moeda.format(m.vendas)),
+            {texto: moeda.format(resultado), classe: 'num ' + classe(resultado)}
+        ];
+    }), 4);
+
+    desenharGraficos(f);
 }
 
 async function carregarTudo() {
@@ -271,19 +351,21 @@ function aoEnviar(idFormulario, acao) {
     });
 }
 
-aoEnviar('form-compra', async () => {
-    const compra = await api('/compras', 'POST', {clienteId: Number($('compra-cliente').value), itens: lerItens('compra')});
-    $('form-compra').reset();
-    limparItens('compra');
-    avisar(`Compra registrada: ${moeda.format(compra.valorTotal)}. Estoque atualizado.`);
-});
+// Registra um novo ou salva por cima do que está em alteração
+async function salvar(tipo, dados) {
+    const alterando = emEdicao[tipo] !== null;
+    const registro = alterando
+        ? await api(`/${tipo}s/${emEdicao[tipo]}`, 'PUT', dados)
+        : await api(`/${tipo}s`, 'POST', dados);
+    encerrarEdicao(tipo);
+    const nome = tipo === 'compra' ? 'Compra' : 'Venda';
+    avisar(`${nome} ${alterando ? 'alterada' : 'registrada'}: ${moeda.format(registro.valorTotal)}. Estoque atualizado.`);
+}
 
-aoEnviar('form-venda', async () => {
-    const venda = await api('/vendas', 'POST', {comprador: $('venda-comprador').value, itens: lerItens('venda')});
-    $('form-venda').reset();
-    limparItens('venda');
-    avisar(`Venda registrada: ${moeda.format(venda.valorTotal)}. Estoque atualizado.`);
-});
+aoEnviar('form-compra', () => salvar('compra', {clienteId: Number($('compra-cliente').value), itens: lerItens('compra')}));
+aoEnviar('form-venda', () => salvar('venda', {comprador: $('venda-comprador').value, itens: lerItens('venda')}));
+
+for (const tipo of ['compra', 'venda']) $(tipo + '-cancelar').onclick = () => encerrarEdicao(tipo);
 
 aoEnviar('form-material', async () => {
     await api('/materiais', 'POST', {nome: $('material-nome').value, categoria: $('material-categoria').value});
@@ -309,8 +391,18 @@ for (const aba of $('abas').children) {
     aba.onclick = () => {
         for (const outra of $('abas').children) outra.classList.toggle('ativa', outra === aba);
         for (const secao of document.querySelectorAll('main > section')) secao.hidden = secao.id !== aba.dataset.aba;
+        desenharGraficos();
     };
 }
+
+$('sair').onclick = async () => {
+    try {
+        await api('/auth/logout', 'POST');
+        location.replace('/login.html');
+    } catch (e) {
+        avisar(e.message, true);
+    }
+};
 
 adicionarItem('compra');
 adicionarItem('venda');

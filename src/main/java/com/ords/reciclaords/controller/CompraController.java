@@ -29,4 +29,15 @@ public class CompraController {
     public List<CompraResponseDTO> listarTodas() {
         return compraService.listarTodas();
     }
+
+    @PutMapping("/{id}")
+    public CompraResponseDTO atualizar(@PathVariable Long id, @RequestBody @Valid CompraRequestDTO dados) {
+        return compraService.atualizar(id, dados);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir(@PathVariable Long id) {
+        compraService.excluir(id);
+    }
 }

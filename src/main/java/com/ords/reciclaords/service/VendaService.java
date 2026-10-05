@@ -10,4 +10,8 @@ public interface VendaService {
     VendaResponseDTO registrar(VendaRequestDTO dados);
 
     List<VendaResponseDTO> listarTodas();
+
+    VendaResponseDTO atualizar(Long id, VendaRequestDTO dados);
+
+    void excluir(Long id);
 }

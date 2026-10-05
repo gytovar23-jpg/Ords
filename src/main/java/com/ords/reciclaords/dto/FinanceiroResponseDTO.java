@@ -8,6 +8,8 @@ public record FinanceiroResponseDTO(
         BigDecimal totalVendas,
         // totalVendas - totalCompras: positivo é lucro, negativo é prejuízo
         BigDecimal resultado,
+        // Últimos 12 meses, do mais antigo para o atual (os totais acima são de todo o período)
+        List<FinanceiroMesDTO> meses,
         List<FinanceiroMaterialDTO> materiais
 ) {
 }

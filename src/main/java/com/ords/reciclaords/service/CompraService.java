@@ -10,4 +10,8 @@ public interface CompraService {
     CompraResponseDTO registrar(CompraRequestDTO dados);
 
     List<CompraResponseDTO> listarTodas();
+
+    CompraResponseDTO atualizar(Long id, CompraRequestDTO dados);
+
+    void excluir(Long id);
 }
